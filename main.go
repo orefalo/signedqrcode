@@ -6,11 +6,16 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	"github.com/pierrec/lz4"
+	"github.com/grkuntzmd/qrcodegen"
+	"github.com/srwiley/oksvg"
+	"github.com/srwiley/rasterx"
 	qrcodeocr "github.com/tuotoo/qrcode"
 	qrcode "github.com/yeqown/go-qrcode"
 	cose "go.mozilla.org/cose"
+	"image"
+	"image/png"
 	"os"
+	"strings"
 )
 
 // Decode
@@ -22,7 +27,7 @@ func jsonEscape(i string) string {
 		panic(err)
 	}
 	s := string(b)
-	return s[1:len(s)-1]
+	return s[1 : len(s)-1]
 }
 
 // Encode
@@ -53,21 +58,21 @@ func main() {
             "ci": "URN:UVCI:01:AT:10807843F94AEE0EE5093FBC254BD813#B"
         }
     ]
-}`)), "./qrcode.jpeg")
+}`)), "./qrcode.png")
 
-  decode("./qrcode.jpeg")
+	decode("./qrcode.png")
 }
 
 func decode(qrcode string) {
 
 	fi, err := os.Open(qrcode)
-	if err != nil{
+	if err != nil {
 		fmt.Println(err.Error())
 		return
 	}
 	defer fi.Close()
 	qrmatrix, err := qrcodeocr.Decode(fi)
-	if err != nil{
+	if err != nil {
 		fmt.Println(err.Error())
 		return
 	}
@@ -75,11 +80,7 @@ func decode(qrcode string) {
 
 }
 
-
-
-
-
-func encode( input []byte, file string) {
+func encode(input []byte, file string) {
 	msg, err := signCOSE(input)
 	if err != nil {
 		panic("cose error")
@@ -97,19 +98,55 @@ func encode( input []byte, file string) {
 	qrcodestr := string(qrcodebin)
 	fmt.Printf("qrcodebin len %d - %s\n", len(qrcodestr), qrcodestr)
 
+	genQRCode1(qrcodestr, file)
+}
+
+func genQRCode2(qrcodestr string, destinationFile string) {
 	qrc, err := qrcode.New(qrcodestr)
 	if err != nil {
 		fmt.Printf("could not generate QRCode: %s", err)
 	}
 
 	// save file
-	if err = qrc.Save(file); err != nil {
+	if err = qrc.Save(destinationFile); err != nil {
 		fmt.Printf("could not save image: %v", err)
 	}
 }
 
+func genQRCode1(qrcodestr string, destinationFile string) {
 
+	segs := []*qrcodegen.QRSegment{
+		qrcodegen.MakeAlphanumeric(qrcodestr),
+		//qrcodegen.MakeNumeric("007020004930000600600300000000000050200010008006900400003700900020050001000008000"),
+	}
+	qrCode, err := qrcodegen.EncodeSegments(segs, qrcodegen.Quartile, qrcodegen.WithAutoMask())
+	if err != nil {
+		// Handle this.
+	}
+	svg, _ := qrCode.ToSVGString(4, true)
 
+		// save svg
+	//f, err := os.Create("./qr.svg")
+	//if err != nil {
+	//	fmt.Println(err)
+	//	return
+	//}
+	//l, err := f.WriteString(svg)
+	//if err != nil {
+	//	fmt.Println(err)
+	//	f.Close()
+	//	return
+	//}
+	//fmt.Println(l, "bytes written successfully")
+	//err = f.Close()
+	//if err != nil {
+	//	fmt.Println(err)
+	//	return
+	//}
+
+	svgToPng(svg, destinationFile)
+
+}
 
 func signCOSE(input []byte) ([]byte, error) {
 	// create a signer with a new private key
@@ -178,40 +215,38 @@ func verifyCOSE() {
 	}
 }
 
-
 func compressZLIB(input []byte) []byte {
-		var b bytes.Buffer
-		w := zlib.NewWriter(&b)
-		w.Write(input)
-		w.Close()
-		return	b.Bytes()
+	var b bytes.Buffer
+	w := zlib.NewWriter(&b)
+	w.Write(input)
+	w.Close()
+	return b.Bytes()
 }
 
+func svgToPng(inputSVG string, outputPNG string) {
 
-func compressLZ4(input []byte) []byte {
-	dest := make([]byte, len(input))
-	n, err := lz4.CompressBlock(input, dest, nil)
+	icon, _ := oksvg.ReadIconStream(strings.NewReader(inputSVG))
+
+	//w := int(icon.ViewBox.W)
+	//h := int(icon.ViewBox.H)
+
+	w, h := 512, 512
+
+	icon.SetTarget(0, 0, float64(w), float64(h))
+	rgba := image.NewRGBA(image.Rect(0, 0, w, h))
+	icon.Draw(rasterx.NewDasher(w, h, rasterx.NewScannerGV(w, h, rgba, rgba.Bounds())), 1)
+
+	out, err := os.Create(outputPNG)
 	if err != nil {
-		fmt.Println(err)
+		panic(err)
 	}
-	if n >= len(input) {
-		fmt.Printf("msg is not compressible")
+	defer out.Close()
+
+	err = png.Encode(out, rgba)
+	if err != nil {
+		panic(err)
 	}
-	dest = dest[:n] // compressed data
-	return dest
 }
-//
-//func decompressLZ4(buf []byte) []byte {
-//
-//	// Allocated a very large buffer for decompression.
-//	out := make([]byte, 10*len(data))
-//	n, err = lz4.UncompressBlock(buf, out)
-//	if err != nil {
-//		fmt.Println(err)
-//	}
-//	out = out[:n] // uncompressed data
-//	return out
-//}
 
 //// BytesToUint16 converts a big endian array of bytes to an array of unit16s
 //func BytesToUint16(bytes []byte) []uint16 {
@@ -241,4 +276,3 @@ func compressLZ4(input []byte) []byte {
 //	publicKey := g1pubs.PrivToPub(privateKey)
 //	return publicKey, privateKey
 //}
-
