@@ -7,6 +7,7 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
+	"github.com/fxamacker/cbor/v2"
 	"github.com/grkuntzmd/qrcodegen"
 	"github.com/pkg/errors"
 	"github.com/srwiley/oksvg"
@@ -64,8 +65,7 @@ func main() {
 }`)), "./qrcode.png")
 
 
-	keypair, err := cose.
-		NewSigner(cose.ES384, nil)
+	keypair, err := cose.NewSigner(cose.ES384, nil)
 	if err != nil {
 		panic(fmt.Sprintf(fmt.Sprintf("Error creating keypair %s", err)))
 	}
@@ -108,14 +108,13 @@ func encode(input []byte, file string) (string, crypto.PublicKey) {
 
 	fmt.Printf("==================================================")
 
-
-	// create a keypair with a new private key
-	keypair, err := cose.NewSigner(cose.ES384, nil)
+	// create a signer with a new private key
+	signer, err := cose.NewSigner(cose.ES384, nil)
 	if err != nil {
-		panic(fmt.Sprintf(fmt.Sprintf("Error creating keypair %s", err)))
+		panic(fmt.Sprintf(fmt.Sprintf("Error creating signer %s", err)))
 	}
 
-	msg, err := signCOSE(keypair, input)
+	msg, err := signCOSE(signer, input)
 	if err != nil {
 		panic("cose error")
 	}
@@ -133,7 +132,7 @@ func encode(input []byte, file string) (string, crypto.PublicKey) {
 	fmt.Printf("qrcodebin len %d - %s\n", len(qrcodestr), qrcodestr)
 
 	genQRCode2(qrcodestr, file)
-	return qrcodestr, keypair.Public()
+	return qrcodestr, signer.Public()
 }
 
 func genQRCode2(qrcodestr string, destinationFile string) {
@@ -214,6 +213,14 @@ func signCOSE(keypair *cose.Signer, input []byte) ([]byte, error) {
 }
 
 func verifyCOSE([]byte) error {
+
+
+	var msg SignMessage
+	err := cbor.Unmarshal(testCase.bytes, &msg)
+
+
+
+
 	// create a signer with a new private key
 	signer, err := cose.NewSigner(cose.ES384, nil)
 	if err != nil {
