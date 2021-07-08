@@ -1,25 +1,17 @@
 # Why forking Mozilla go-cose?
 
-This fork of [Mozilla go-cose](https://github.com/mozilla-services/go-cose) adds [Sign1](https://tools.ietf.org/html/rfc8152#section-4.2) capabilities to the parent package.  We hope we can reconcile our fork quite quickly.  In the meantime, you can inspect the delta [here](https://github.com/mozilla-services/go-cose/compare/master...veraison:master).
+This fork of [Mozilla go-cose](https://github.com/mozilla-services/go-cose)
 
-# go-cose
-
-[![GitHub CI](https://github.com/veraison/go-cose/workflows/ci/badge.svg)](https://github.com/veraison/go-cose/actions?query=workflow%3Aci)
-
-[![Coverage Status](https://github.com/veraison/go-cose/workflows/cover%20%E2%89%A589%25/badge.svg)](https://github.com/veraison/go-cose/actions?query=workflow%3A%22cover%20%E2%89%A589%25%22)
-
-A [COSE](https://tools.ietf.org/html/rfc8152) library for go.
-
-It currently supports signing and verifying the SignMessage and Sign1Message types with the ES{256,384,512} and PS256 algorithms.
-
-[API docs](https://pkg.go.dev/github.com/veraison/go-cose)
+adds
+- [Sign1](https://tools.ietf.org/html/rfc8152#section-4.2) capabilities to the parent package.
+- Ability to create Verifier from public key
 
 ## Usage
 
 ### Install
 
 ```console
-go get -u github.com/veraison/go-cose
+go get -u github.com/orefalo/go-cose
 ```
 
 ### Signing a message

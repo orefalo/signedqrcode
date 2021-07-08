@@ -8,22 +8,15 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/grkuntzmd/qrcodegen"
+	"github.com/makiuchi-d/gozxing"
+	zxingqrcode "github.com/makiuchi-d/gozxing/qrcode"
 	"github.com/pkg/errors"
-	"github.com/srwiley/oksvg"
-	"github.com/srwiley/rasterx"
-	qrocr "github.com/tuotoo/qrcode"
 	qrcode "github.com/yeqown/go-qrcode"
 	cose "go.mozilla.org/cose"
 	"image"
-	"image/png"
 	"io"
 	"os"
-	"strings"
 )
-
-// Decode
-// Scan QRCode -> unBase45 -> unLZ4 -> unCBOR -> JSON
 
 func jsonEscape(i string) string {
 	b, err := json.Marshal(i)
@@ -34,12 +27,20 @@ func jsonEscape(i string) string {
 	return s[1 : len(s)-1]
 }
 
-// Encode
-//JSON -> CBOR -> COSE -> LZ4 -> Base45 -> QRCode generation
-// JSON -> COSE -> CBOR -> LZ4 -> Base45
+func generateSigner() *cose.Signer {
+	// create a signer with a new private key
+	signer, err := cose.NewSigner(cose.ES384, nil)
+	if err != nil {
+		panic(fmt.Sprintf(fmt.Sprintf("Error creating signer %s", err)))
+	}
+	return signer
+}
 
 func main() {
-	qrStr, _ := encode([]byte(jsonEscape(`{
+
+	signer := generateSigner()
+
+	encode(signer, []byte(jsonEscape(`{
     "ver": "1.2.1",
     "nam": {
         "fn": "Musterfrau-G\u00f6\u00dfinger",
@@ -64,28 +65,21 @@ func main() {
     ]
 }`)), "./qrcode.png")
 
-
-	decode("./qrcode.png", qrStr)
+	decode("./qrcode.png", signer.Verifier().PublicKey)
 }
 
-func decode(qrcodeFile string, qrStr string) {
+// Decode
+// Scan QRCode -> unBase45 -> unLZ4 -> unCBOR -> JSON
+func decode(qrcodeFile string, publickey crypto.PublicKey) {
 
 	fmt.Println("==================================================")
 
-	fi, err := os.Open(qrcodeFile)
+	qrcodestr, err := ocrQRCode2(qrcodeFile)
 	if err != nil {
-		fmt.Println(err.Error())
-		return
+		errors.Errorf("%s", err)
 	}
-	defer fi.Close()
-	qrmatrix, err := qrocr.Decode(fi)
-	if err != nil {
-		fmt.Println(err.Error())
-		return
-	}
-	fmt.Printf("read from qr %s", qrmatrix.Content)
 
-	compressed, err := Base45Decode([]byte(qrStr))
+	compressed, err := Base45Decode([]byte(qrcodestr))
 	if err != nil {
 		fmt.Printf("could not decode base45: %s", err)
 	}
@@ -93,6 +87,9 @@ func decode(qrcodeFile string, qrStr string) {
 
 	msg := decompressZLIB(compressed)
 	fmt.Printf("cose len %d - %x\n", len(msg), msg)
+
+
+
 	//err = verifyCOSE(msg)
 	//if err != nil {
 	//	fmt.Println(err.Error())
@@ -100,15 +97,43 @@ func decode(qrcodeFile string, qrStr string) {
 	//}
 }
 
-func encode(input []byte, file string) (string, crypto.PublicKey) {
+//func ocrQRCode1(qrcodeFile string) (msg string, err error) {
+//	fi, err := os.Open(qrcodeFile)
+//	if err != nil {
+//		return "", err
+//	}
+//	defer fi.Close()
+//	qrmatrix, err := qrocr.Decode(fi)
+//	if err != nil {
+//		return "", err
+//	}
+//	content := qrmatrix.Content
+//	fmt.Printf("read from qr %s", content)
+//	return content, nil
+//}
+
+func ocrQRCode2(qrcodeFile string) (msg string, err error) {
+	// open and decode image file
+	file, _ := os.Open(qrcodeFile)
+	img, _, _ := image.Decode(file)
+
+	// prepare BinaryBitmap
+	bmp, _ := gozxing.NewBinaryBitmapFromImage(img)
+
+	// decode image
+	qrReader := zxingqrcode.NewQRCodeReader()
+	result, _ := qrReader.Decode(bmp, nil)
+
+	output := result.String()
+	fmt.Println("read from qr %s" + output)
+	return output, nil
+}
+
+// Encode
+// JSON -> CBOR -> COSE -> LZ4 -> Base45 -> QRCode generation
+func encode(signer *cose.Signer, input []byte, file string) {
 
 	fmt.Println("==================================================")
-
-	// create a signer with a new private key
-	signer, err := cose.NewSigner(cose.ES384, nil)
-	if err != nil {
-		panic(fmt.Sprintf(fmt.Sprintf("Error creating signer %s", err)))
-	}
 
 	msg, err := signCOSE(signer, input)
 	if err != nil {
@@ -127,7 +152,6 @@ func encode(input []byte, file string) (string, crypto.PublicKey) {
 	fmt.Printf("qrcodebin len %d - %s\n", len(qrcodestr), qrcodestr)
 
 	genQRCode2(qrcodestr, file)
-	return qrcodestr, signer.Public()
 }
 
 func genQRCode2(qrcodestr string, destinationFile string) {
@@ -142,46 +166,46 @@ func genQRCode2(qrcodestr string, destinationFile string) {
 	}
 }
 
-func genQRCode1(qrcodestr string, destinationFile string) {
+//func genQRCode1(qrcodestr string, destinationFile string) {
+//
+//	segs := []*qrcodegen.QRSegment{
+//		qrcodegen.MakeAlphanumeric(qrcodestr),
+//		//qrcodegen.MakeNumeric("007020004930000600600300000000000050200010008006900400003700900020050001000008000"),
+//	}
+//	qrCode, err := qrcodegen.EncodeSegments(segs, qrcodegen.Quartile, qrcodegen.WithAutoMask())
+//	if err != nil {
+//		// Handle this.
+//	}
+//	svg, _ := qrCode.ToSVGString(4, true)
+//
+//	// save qr to svg
+//	if saveToSvg(svg) {
+//		errors.Errorf("saveToSvg - FAILED")
+//	}
+//
+//	svgToPng(svg, destinationFile)
+//}
 
-	segs := []*qrcodegen.QRSegment{
-		qrcodegen.MakeAlphanumeric(qrcodestr),
-		//qrcodegen.MakeNumeric("007020004930000600600300000000000050200010008006900400003700900020050001000008000"),
-	}
-	qrCode, err := qrcodegen.EncodeSegments(segs, qrcodegen.Quartile, qrcodegen.WithAutoMask())
-	if err != nil {
-		// Handle this.
-	}
-	svg, _ := qrCode.ToSVGString(4, true)
-
-	// save qr to svg
-	if saveToSvg(svg) {
-		errors.Errorf("saveToSvg - FAILED")
-	}
-
-	svgToPng(svg, destinationFile)
-}
-
-func saveToSvg(svg string) bool {
-	f, err := os.Create("./qr.svg")
-	if err != nil {
-		fmt.Println(err)
-		return true
-	}
-	l, err := f.WriteString(svg)
-	if err != nil {
-		fmt.Println(err)
-		f.Close()
-		return true
-	}
-	fmt.Println(l, "bytes written successfully")
-	err = f.Close()
-	if err != nil {
-		fmt.Println(err)
-		return true
-	}
-	return false
-}
+//func saveToSvg(svg string) bool {
+//	f, err := os.Create("./qr.svg")
+//	if err != nil {
+//		fmt.Println(err)
+//		return true
+//	}
+//	l, err := f.WriteString(svg)
+//	if err != nil {
+//		fmt.Println(err)
+//		f.Close()
+//		return true
+//	}
+//	fmt.Println(l, "bytes written successfully")
+//	err = f.Close()
+//	if err != nil {
+//		fmt.Println(err)
+//		return true
+//	}
+//	return false
+//}
 
 func signCOSE(keypair *cose.Signer, input []byte) ([]byte, error) {
 
@@ -279,31 +303,30 @@ func decompressZLIB(input []byte) []byte {
 	return output.Bytes()
 }
 
-
-func svgToPng(inputSVG string, outputPNG string) {
-
-	icon, _ := oksvg.ReadIconStream(strings.NewReader(inputSVG))
-
-	//w := int(icon.ViewBox.W)
-	//h := int(icon.ViewBox.H)
-
-	w, h := 512, 512
-
-	icon.SetTarget(0, 0, float64(w), float64(h))
-	rgba := image.NewRGBA(image.Rect(0, 0, w, h))
-	icon.Draw(rasterx.NewDasher(w, h, rasterx.NewScannerGV(w, h, rgba, rgba.Bounds())), 1)
-
-	out, err := os.Create(outputPNG)
-	if err != nil {
-		panic(err)
-	}
-	defer out.Close()
-
-	err = png.Encode(out, rgba)
-	if err != nil {
-		panic(err)
-	}
-}
+//func svgToPng(inputSVG string, outputPNG string) {
+//
+//	icon, _ := oksvg.ReadIconStream(strings.NewReader(inputSVG))
+//
+//	//w := int(icon.ViewBox.W)
+//	//h := int(icon.ViewBox.H)
+//
+//	w, h := 512, 512
+//
+//	icon.SetTarget(0, 0, float64(w), float64(h))
+//	rgba := image.NewRGBA(image.Rect(0, 0, w, h))
+//	icon.Draw(rasterx.NewDasher(w, h, rasterx.NewScannerGV(w, h, rgba, rgba.Bounds())), 1)
+//
+//	out, err := os.Create(outputPNG)
+//	if err != nil {
+//		panic(err)
+//	}
+//	defer out.Close()
+//
+//	err = png.Encode(out, rgba)
+//	if err != nil {
+//		panic(err)
+//	}
+//}
 
 //// BytesToUint16 converts a big endian array of bytes to an array of unit16s
 //func BytesToUint16(bytes []byte) []uint16 {
