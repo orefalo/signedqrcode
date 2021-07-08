@@ -7,7 +7,7 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	"github.com/fxamacker/cbor/v2"
+
 	"github.com/grkuntzmd/qrcodegen"
 	"github.com/pkg/errors"
 	"github.com/srwiley/oksvg"
@@ -39,7 +39,7 @@ func jsonEscape(i string) string {
 // JSON -> COSE -> CBOR -> LZ4 -> Base45
 
 func main() {
-	qrStr, publicKey := encode([]byte(jsonEscape(`{
+	qrStr, _ := encode([]byte(jsonEscape(`{
     "ver": "1.2.1",
     "nam": {
         "fn": "Musterfrau-G\u00f6\u00dfinger",
@@ -65,17 +65,12 @@ func main() {
 }`)), "./qrcode.png")
 
 
-	keypair, err := cose.NewSigner(cose.ES384, nil)
-	if err != nil {
-		panic(fmt.Sprintf(fmt.Sprintf("Error creating keypair %s", err)))
-	}
-
 	decode("./qrcode.png", qrStr)
 }
 
 func decode(qrcodeFile string, qrStr string) {
 
-	fmt.Printf("==================================================")
+	fmt.Println("==================================================")
 
 	fi, err := os.Open(qrcodeFile)
 	if err != nil {
@@ -94,19 +89,20 @@ func decode(qrcodeFile string, qrStr string) {
 	if err != nil {
 		fmt.Printf("could not decode base45: %s", err)
 	}
+	fmt.Printf("compressed len %d - %x\n", len(compressed), compressed)
 
 	msg := decompressZLIB(compressed)
-
-	err = verifyCOSE(msg)
-	if err != nil {
-		fmt.Println(err.Error())
-		return
-	}
+	fmt.Printf("cose len %d - %x\n", len(msg), msg)
+	//err = verifyCOSE(msg)
+	//if err != nil {
+	//	fmt.Println(err.Error())
+	//	return
+	//}
 }
 
 func encode(input []byte, file string) (string, crypto.PublicKey) {
 
-	fmt.Printf("==================================================")
+	fmt.Println("==================================================")
 
 	// create a signer with a new private key
 	signer, err := cose.NewSigner(cose.ES384, nil)
@@ -118,16 +114,15 @@ func encode(input []byte, file string) (string, crypto.PublicKey) {
 	if err != nil {
 		panic("cose error")
 	}
-	fmt.Printf("msg len %d - %x\n", len(msg), msg)
-	compressed := compressZLIB(msg)
+	fmt.Printf("cose len %d - %x\n", len(msg), msg)
 
+	compressed := compressZLIB(msg)
 	fmt.Printf("compressed len %d - %x\n", len(compressed), compressed)
 
 	qrcodebin, err := Base45Encode(compressed)
 	if err != nil {
 		fmt.Printf("could not generate QRCode: %s", err)
 	}
-
 	qrcodestr := string(qrcodebin)
 	fmt.Printf("qrcodebin len %d - %s\n", len(qrcodestr), qrcodestr)
 
@@ -202,64 +197,63 @@ func signCOSE(keypair *cose.Signer, input []byte) ([]byte, error) {
 	msg.Payload = input
 	msg.AddSignature(sig)
 
-	err = msg.Sign(rand.Reader, external, []cose.Signer{*keypair})
+	err := msg.Sign(rand.Reader, external, []cose.Signer{*keypair})
 	if err == nil {
 		return msg.MarshalCBOR()
-		//fmt.Println(fmt.Sprintf("Message signature (ES256): %x", msg.Signatures[0].SignatureBytes))
 	} else {
 		panic(fmt.Sprintf("Error signing the message -> %+v", err))
 	}
 	return nil, nil
 }
 
-func verifyCOSE([]byte) error {
-
-
-	var msg SignMessage
-	err := cbor.Unmarshal(testCase.bytes, &msg)
-
-
-
-
-	// create a signer with a new private key
-	signer, err := cose.NewSigner(cose.ES384, nil)
-	if err != nil {
-		panic(fmt.Sprintf(fmt.Sprintf("Error creating signer -> %s", err)))
-	}
-
-	// create a signature
-	sig := cose.NewSignature()
-	sig.Headers.Unprotected["kid"] = 1
-	sig.Headers.Protected["alg"] = "ES384"
-
-	// create a message
-	external := []byte("") // optional external data see https://tools.ietf.org/html/rfc8152#section-4.3
-
-	msg := cose.NewSignMessage()
-	msg.Payload = []byte("payload to sign")
-	msg.AddSignature(sig)
-
-	err = msg.Sign(rand.Reader, external, []cose.Signer{*signer})
-	if err == nil {
-		fmt.Println(fmt.Sprintf("Message signature (ES256): %x", msg.Signatures[0].SignatureBytes))
-	} else {
-		panic(fmt.Sprintf("Error signing the message %+v", err))
-	}
-
-	// derive a verifier using the signer's public key and COSE algorithm
-	verifier := signer.Verifier()
-	verifier := signer.Verifier()
-	cose.NewSignerFromKey()
-
-	// Verify
-	err = msg.Verify(external, []cose.Verifier{*verifier})
-	if err == nil {
-		fmt.Println("Message signature verified")
-	} else {
-		fmt.Println(fmt.Sprintf("Error verifying the message %+v", err))
-	}
-	return nil
-}
+//func verifyCOSE([]byte) error {
+//
+//
+//	var msg SignMessage
+//	err := cbor.Unmarshal(testCase.bytes, &msg)
+//
+//
+//
+//
+//	// create a signer with a new private key
+//	signer, err := cose.NewSigner(cose.ES384, nil)
+//	if err != nil {
+//		panic(fmt.Sprintf(fmt.Sprintf("Error creating signer -> %s", err)))
+//	}
+//
+//	// create a signature
+//	sig := cose.NewSignature()
+//	sig.Headers.Unprotected["kid"] = 1
+//	sig.Headers.Protected["alg"] = "ES384"
+//
+//	// create a message
+//	external := []byte("") // optional external data see https://tools.ietf.org/html/rfc8152#section-4.3
+//
+//	msg := cose.NewSignMessage()
+//	msg.Payload = []byte("payload to sign")
+//	msg.AddSignature(sig)
+//
+//	err = msg.Sign(rand.Reader, external, []cose.Signer{*signer})
+//	if err == nil {
+//		fmt.Println(fmt.Sprintf("Message signature (ES256): %x", msg.Signatures[0].SignatureBytes))
+//	} else {
+//		panic(fmt.Sprintf("Error signing the message %+v", err))
+//	}
+//
+//	// derive a verifier using the signer's public key and COSE algorithm
+//	verifier := signer.Verifier()
+//	verifier := signer.Verifier()
+//	cose.NewSignerFromKey()
+//
+//	// Verify
+//	err = msg.Verify(external, []cose.Verifier{*verifier})
+//	if err == nil {
+//		fmt.Println("Message signature verified")
+//	} else {
+//		fmt.Println(fmt.Sprintf("Error verifying the message %+v", err))
+//	}
+//	return nil
+//}
 
 func compressZLIB(input []byte) []byte {
 	var output bytes.Buffer
