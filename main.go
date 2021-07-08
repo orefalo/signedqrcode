@@ -3,17 +3,20 @@ package main
 import (
 	"bytes"
 	"compress/zlib"
+	"crypto"
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"github.com/grkuntzmd/qrcodegen"
+	"github.com/pkg/errors"
 	"github.com/srwiley/oksvg"
 	"github.com/srwiley/rasterx"
-	qrcodeocr "github.com/tuotoo/qrcode"
+	qrocr "github.com/tuotoo/qrcode"
 	qrcode "github.com/yeqown/go-qrcode"
 	cose "go.mozilla.org/cose"
 	"image"
 	"image/png"
+	"io"
 	"os"
 	"strings"
 )
@@ -35,7 +38,7 @@ func jsonEscape(i string) string {
 // JSON -> COSE -> CBOR -> LZ4 -> Base45
 
 func main() {
-	encode([]byte(jsonEscape(`{
+	qrStr, publicKey := encode([]byte(jsonEscape(`{
     "ver": "1.2.1",
     "nam": {
         "fn": "Musterfrau-G\u00f6\u00dfinger",
@@ -60,28 +63,59 @@ func main() {
     ]
 }`)), "./qrcode.png")
 
-	decode("./qrcode.png")
+
+	keypair, err := cose.
+		NewSigner(cose.ES384, nil)
+	if err != nil {
+		panic(fmt.Sprintf(fmt.Sprintf("Error creating keypair %s", err)))
+	}
+
+	decode("./qrcode.png", qrStr)
 }
 
-func decode(qrcode string) {
+func decode(qrcodeFile string, qrStr string) {
 
-	fi, err := os.Open(qrcode)
+	fmt.Printf("==================================================")
+
+	fi, err := os.Open(qrcodeFile)
 	if err != nil {
 		fmt.Println(err.Error())
 		return
 	}
 	defer fi.Close()
-	qrmatrix, err := qrcodeocr.Decode(fi)
+	qrmatrix, err := qrocr.Decode(fi)
 	if err != nil {
 		fmt.Println(err.Error())
 		return
 	}
-	fmt.Println(qrmatrix.Content)
+	fmt.Printf("read from qr %s", qrmatrix.Content)
 
+	compressed, err := Base45Decode([]byte(qrStr))
+	if err != nil {
+		fmt.Printf("could not decode base45: %s", err)
+	}
+
+	msg := decompressZLIB(compressed)
+
+	err = verifyCOSE(msg)
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 }
 
-func encode(input []byte, file string) {
-	msg, err := signCOSE(input)
+func encode(input []byte, file string) (string, crypto.PublicKey) {
+
+	fmt.Printf("==================================================")
+
+
+	// create a keypair with a new private key
+	keypair, err := cose.NewSigner(cose.ES384, nil)
+	if err != nil {
+		panic(fmt.Sprintf(fmt.Sprintf("Error creating keypair %s", err)))
+	}
+
+	msg, err := signCOSE(keypair, input)
 	if err != nil {
 		panic("cose error")
 	}
@@ -98,7 +132,8 @@ func encode(input []byte, file string) {
 	qrcodestr := string(qrcodebin)
 	fmt.Printf("qrcodebin len %d - %s\n", len(qrcodestr), qrcodestr)
 
-	genQRCode1(qrcodestr, file)
+	genQRCode2(qrcodestr, file)
+	return qrcodestr, keypair.Public()
 }
 
 func genQRCode2(qrcodestr string, destinationFile string) {
@@ -125,39 +160,40 @@ func genQRCode1(qrcodestr string, destinationFile string) {
 	}
 	svg, _ := qrCode.ToSVGString(4, true)
 
-		// save svg
-	//f, err := os.Create("./qr.svg")
-	//if err != nil {
-	//	fmt.Println(err)
-	//	return
-	//}
-	//l, err := f.WriteString(svg)
-	//if err != nil {
-	//	fmt.Println(err)
-	//	f.Close()
-	//	return
-	//}
-	//fmt.Println(l, "bytes written successfully")
-	//err = f.Close()
-	//if err != nil {
-	//	fmt.Println(err)
-	//	return
-	//}
+	// save qr to svg
+	if saveToSvg(svg) {
+		errors.Errorf("saveToSvg - FAILED")
+	}
 
 	svgToPng(svg, destinationFile)
-
 }
 
-func signCOSE(input []byte) ([]byte, error) {
-	// create a signer with a new private key
-	signer, err := cose.NewSigner(cose.ES384, nil)
+func saveToSvg(svg string) bool {
+	f, err := os.Create("./qr.svg")
 	if err != nil {
-		panic(fmt.Sprintf(fmt.Sprintf("Error creating signer %s", err)))
+		fmt.Println(err)
+		return true
 	}
+	l, err := f.WriteString(svg)
+	if err != nil {
+		fmt.Println(err)
+		f.Close()
+		return true
+	}
+	fmt.Println(l, "bytes written successfully")
+	err = f.Close()
+	if err != nil {
+		fmt.Println(err)
+		return true
+	}
+	return false
+}
+
+func signCOSE(keypair *cose.Signer, input []byte) ([]byte, error) {
 
 	// create a signature
 	sig := cose.NewSignature()
-	//sig.Headers.Unprotected["kid"] = 1
+	sig.Headers.Unprotected["kid"] = 1
 	sig.Headers.Protected["alg"] = "ES384"
 
 	// create a message
@@ -167,7 +203,7 @@ func signCOSE(input []byte) ([]byte, error) {
 	msg.Payload = input
 	msg.AddSignature(sig)
 
-	err = msg.Sign(rand.Reader, external, []cose.Signer{*signer})
+	err = msg.Sign(rand.Reader, external, []cose.Signer{*keypair})
 	if err == nil {
 		return msg.MarshalCBOR()
 		//fmt.Println(fmt.Sprintf("Message signature (ES256): %x", msg.Signatures[0].SignatureBytes))
@@ -177,7 +213,7 @@ func signCOSE(input []byte) ([]byte, error) {
 	return nil, nil
 }
 
-func verifyCOSE() {
+func verifyCOSE([]byte) error {
 	// create a signer with a new private key
 	signer, err := cose.NewSigner(cose.ES384, nil)
 	if err != nil {
@@ -205,6 +241,8 @@ func verifyCOSE() {
 
 	// derive a verifier using the signer's public key and COSE algorithm
 	verifier := signer.Verifier()
+	verifier := signer.Verifier()
+	cose.NewSignerFromKey()
 
 	// Verify
 	err = msg.Verify(external, []cose.Verifier{*verifier})
@@ -213,15 +251,33 @@ func verifyCOSE() {
 	} else {
 		fmt.Println(fmt.Sprintf("Error verifying the message %+v", err))
 	}
+	return nil
 }
 
 func compressZLIB(input []byte) []byte {
-	var b bytes.Buffer
-	w := zlib.NewWriter(&b)
-	w.Write(input)
+	var output bytes.Buffer
+	w := zlib.NewWriter(&output)
+	_, err := w.Write(input)
+	if err != nil {
+		return nil
+	}
 	w.Close()
-	return b.Bytes()
+	return output.Bytes()
 }
+
+func decompressZLIB(input []byte) []byte {
+
+	b := bytes.NewReader(input)
+	r, err := zlib.NewReader(b)
+	if err != nil {
+		panic(err)
+	}
+	var output bytes.Buffer
+	io.Copy(&output, r)
+	r.Close()
+	return output.Bytes()
+}
+
 
 func svgToPng(inputSVG string, outputPNG string) {
 
