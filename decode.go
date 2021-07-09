@@ -7,7 +7,6 @@ import (
 	cose "example.com/main/go-cose"
 	"fmt"
 	"github.com/fxamacker/cbor/v2"
-
 	"github.com/makiuchi-d/gozxing"
 	zxingqrcode "github.com/makiuchi-d/gozxing/qrcode"
 	"github.com/pkg/errors"
@@ -18,7 +17,7 @@ import (
 
 // Decode
 // Scan QRCode -> unBase45 -> unLZ4 -> unCBOR -> JSON
-func decode(qrcodeFile string, publickey crypto.PublicKey) {
+func decode(qrcodeFile string, publickey crypto.PublicKey, alg *cose.Algorithm) {
 
 	fmt.Println("==================================================")
 
@@ -36,16 +35,16 @@ func decode(qrcodeFile string, publickey crypto.PublicKey) {
 	msg := decompressZLIB(compressed)
 	fmt.Printf("cose len %d - %x\n", len(msg), msg)
 
-	_, err = verifyCOSE(msg, publickey)
+	_, err = verifyCOSE(msg, publickey, alg)
 	if err != nil {
 		fmt.Println(err.Error())
 		return
 	}
 }
 
-func verifyCOSE(input []byte, publickey crypto.PublicKey) (output string, err error) {
+func verifyCOSE(input []byte, publickey crypto.PublicKey, alg *cose.Algorithm) (output string, err error) {
 
-	verifier, err := cose.NewVerifierFromKey(cose.ES384, &publickey)
+	verifier, err := cose.NewVerifierFromKey(alg, publickey)
 	var msg cose.SignMessage
 	err = cbor.Unmarshal(input, &msg)
 
@@ -54,7 +53,7 @@ func verifyCOSE(input []byte, publickey crypto.PublicKey) (output string, err er
 	err = msg.Verify(external, []cose.Verifier{*verifier})
 	if err == nil {
 		fmt.Println("Message signature verified")
-		return "", nil
+		return msg.Payload, nil
 	} else {
 		fmt.Println(fmt.Sprintf("Error verifying the message %+v", err))
 		return "", err

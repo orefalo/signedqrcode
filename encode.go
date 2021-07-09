@@ -6,8 +6,8 @@ import (
 	"crypto/rand"
 	"fmt"
 
+	cose "example.com/main/go-cose"
 	qrcode "github.com/yeqown/go-qrcode"
-	cose "go.mozilla.org/cose"
 )
 
 // Encode

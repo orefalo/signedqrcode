@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	cose "go.mozilla.org/cose"
+	cose "example.com/main/go-cose"
 )
 
 func jsonEscape(i string) string {
@@ -54,5 +54,6 @@ func main() {
     ]
 }`)), "./qrcode.png")
 
-	decode("./qrcode.png", signer.Verifier().PublicKey)
+	verifier := signer.Verifier()
+	decode("./qrcode.png", verifier.PublicKey, verifier.Alg)
 }
