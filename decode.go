@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"compress/zlib"
 	"crypto"
+	cose "example.com/main/go-cose"
 	"fmt"
+	"github.com/fxamacker/cbor/v2"
 
 	"github.com/makiuchi-d/gozxing"
 	zxingqrcode "github.com/makiuchi-d/gozxing/qrcode"
@@ -35,12 +37,46 @@ func decode(qrcodeFile string, publickey crypto.PublicKey) {
 	msg := decompressZLIB(compressed)
 	fmt.Printf("cose len %d - %x\n", len(msg), msg)
 
-	//err = verifyCOSE(msg)
-	//if err != nil {
-	//	fmt.Println(err.Error())
-	//	return
-	//}
+	output, err = verifyCOSE(msg, publickey)
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 }
+
+
+func verifyCOSE(input []byte, publickey crypto.PublicKey) (output string, err error) {
+
+	verifier, err := cose.NewVerifierFromKey(cose.ES384, &publickey)
+	var msg cose.SignMessage
+	err = cbor.Unmarshal(input, &msg)
+
+	external := []byte("")
+
+	err = msg.Verify(external, []cose.Verifier{*verifier})
+	if err == nil {
+		fmt.Println("Message signature verified")
+		return "", nil
+	} else {
+		fmt.Println(fmt.Sprintf("Error verifying the message %+v", err))
+		return "", err
+	}
+
+}
+
+func decompressZLIB(input []byte) []byte {
+
+	b := bytes.NewReader(input)
+	r, err := zlib.NewReader(b)
+	if err != nil {
+		panic(err)
+	}
+	var output bytes.Buffer
+	io.Copy(&output, r)
+	r.Close()
+	return output.Bytes()
+}
+
 
 func ocrQRCode2(qrcodeFile string) (msg string, err error) {
 	// open and decode image file
@@ -58,69 +94,6 @@ func ocrQRCode2(qrcodeFile string) (msg string, err error) {
 	fmt.Println("read from qr %s" + output)
 	return output, nil
 }
-
-//func verifyCOSE([]byte) error {
-//
-//
-//	var msg SignMessage
-//	err := cbor.Unmarshal(testCase.bytes, &msg)
-//
-//
-//
-//
-//	// create a signer with a new private key
-//	signer, err := cose.NewSigner(cose.ES384, nil)
-//	if err != nil {
-//		panic(fmt.Sprintf(fmt.Sprintf("Error creating signer -> %s", err)))
-//	}
-//
-//	// create a signature
-//	sig := cose.NewSignature()
-//	sig.Headers.Unprotected["kid"] = 1
-//	sig.Headers.Protected["alg"] = "ES384"
-//
-//	// create a message
-//	external := []byte("") // optional external data see https://tools.ietf.org/html/rfc8152#section-4.3
-//
-//	msg := cose.NewSignMessage()
-//	msg.Payload = []byte("payload to sign")
-//	msg.AddSignature(sig)
-//
-//	err = msg.Sign(rand.Reader, external, []cose.Signer{*signer})
-//	if err == nil {
-//		fmt.Println(fmt.Sprintf("Message signature (ES256): %x", msg.Signatures[0].SignatureBytes))
-//	} else {
-//		panic(fmt.Sprintf("Error signing the message %+v", err))
-//	}
-//
-//	// derive a verifier using the signer's public key and COSE algorithm
-//	verifier := signer.Verifier()
-//	verifier := signer.Verifier()
-//	cose.NewSignerFromKey()
-//
-//	// Verify
-//	err = msg.Verify(external, []cose.Verifier{*verifier})
-//	if err == nil {
-//		fmt.Println("Message signature verified")
-//	} else {
-//		fmt.Println(fmt.Sprintf("Error verifying the message %+v", err))
-//	}
-//	return nil
-//}
-
-func decompressZLIB(input []byte) []byte {
-
-	b := bytes.NewReader(input)
-	r, err := zlib.NewReader(b)
-	if err != nil {
-		panic(err)
-	}
-	var output bytes.Buffer
-	io.Copy(&output, r)
-	r.Close()
-	return output.Bytes()
-}
-
 //func svgToPng(inputSVG string, outputPNG string) {
 //
 //	icon, _ := oksvg.ReadIconStream(strings.NewReader(inputSVG))
