@@ -29,7 +29,7 @@ func main() {
 
 	signer := generateSigner()
 
-	encode(signer, []byte(jsonEscape(`{
+	err:=encodeToFile(signer, []byte(jsonEscape(`{
     "ver": "1.2.1",
     "nam": {
         "fn": "Musterfrau-G\u00f6\u00dfinger",
@@ -53,8 +53,16 @@ func main() {
         }
     ]
 }`)), "./qrcode.png")
+	if err != nil {
+		fmt.Println(err)
+	} else {
 
-	verifier := signer.Verifier()
-	decoded := decode("./qrcode.png", verifier.PublicKey, verifier.Alg)
-	fmt.Println(decoded)
+		verifier := signer.Verifier()
+		decoded, err := decode("./qrcode.png", verifier.PublicKey, verifier.Alg)
+		if err != nil {
+			fmt.Println(err)
+		} else {
+			fmt.Println(string(decoded))
+		}
+	}
 }

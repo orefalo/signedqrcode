@@ -34,7 +34,7 @@ func Base45Encode(input []byte) ([]byte, error) {
 	ensureLookups()
 
 	if len(input) > 0 && input[0] == 0 {
-		return nil, errors.Errorf("Could not encode input that starts with a zero-byte")
+		return nil, errors.Errorf("Could not encodeToFile input that starts with a zero-byte")
 	}
 
 	goEncoded := []byte(new(gobig.Int).SetBytes(input).Text(45))
@@ -78,7 +78,7 @@ func Base45EncodeAlternative(input []byte) ([]byte, error) {
 	}
 
 	if input[0] == 0 {
-		return nil, errors.Errorf("Could not encode input that starts with a zero-byte")
+		return nil, errors.Errorf("Could not encodeToFile input that starts with a zero-byte")
 	}
 
 	estOutputLen := int(float64(inputLen)*1.4568) + 1

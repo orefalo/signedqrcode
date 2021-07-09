@@ -17,62 +17,70 @@ import (
 
 // Decode
 // Scan QRCode -> unBase45 -> unLZ4 -> unCBOR -> JSON
-func decode(qrcodeFile string, publickey crypto.PublicKey, alg *cose.Algorithm) string {
-
-	fmt.Println("==================================================")
+func decode(qrcodeFile string, publickey crypto.PublicKey, alg *cose.Algorithm) (output []byte, err error) {
 
 	qrcodestr, err := ocrQRCode2(qrcodeFile)
 	if err != nil {
-		errors.Errorf("%s", err)
+		return nil, errors.Wrap(err, "Cannot OCR qrcode")
+
 	}
 
 	compressed, err := Base45Decode([]byte(qrcodestr))
 	if err != nil {
-		fmt.Printf("could not decode base45: %s", err)
+		return nil, errors.Wrap(err, "Cannot decode base45")
 	}
 	fmt.Printf("compressed len %d - %x\n", len(compressed), compressed)
 
-	msg := decompressZLIB(compressed)
+	msg, err := decompressZLIB(compressed)
+	if err != nil {
+		return nil, errors.Wrap(err, "Cannot decompress zlib")
+
+	}
 	fmt.Printf("cose len %d - %x\n", len(msg), msg)
 
 	decoded, err := verifyCOSE(msg, publickey, alg)
 	if err != nil {
-		fmt.Println(err.Error())
-		return ""
+		return nil, errors.Wrap(err, "Cannot validate signature")
 	}
-	return decoded
+	return decoded, nil
 }
 
-func verifyCOSE(input []byte, publickey crypto.PublicKey, alg *cose.Algorithm) (output string, err error) {
+func verifyCOSE(input []byte, publickey crypto.PublicKey, alg *cose.Algorithm) (output []byte, err error) {
 
 	verifier, err := cose.NewVerifierFromKey(alg, publickey)
 	var msg cose.SignMessage
 	err = cbor.Unmarshal(input, &msg)
+	if err != nil {
+		return nil, errors.Wrap(err, "Cannot unmarshall")
+	}
 
 	external := []byte("")
 
 	err = msg.Verify(external, []cose.Verifier{*verifier})
-	if err == nil {
-		fmt.Println("Message signature verified")
-		return string(msg.Payload), nil
-	} else {
-		fmt.Println(fmt.Sprintf("Error verifying the message %+v", err))
-		return "", err
+	if err != nil {
+		return nil, errors.Wrap(err, "Cannot validate signature")
 	}
+	return msg.Payload, nil
 
 }
 
-func decompressZLIB(input []byte) []byte {
+func decompressZLIB(input []byte) ([]byte, error) {
 
 	b := bytes.NewReader(input)
 	r, err := zlib.NewReader(b)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	var output bytes.Buffer
-	io.Copy(&output, r)
-	r.Close()
-	return output.Bytes()
+	_, err = io.Copy(&output, r)
+	if err != nil {
+		return nil, err
+	}
+	err = r.Close()
+	if err != nil {
+		return nil, err
+	}
+	return output.Bytes(), nil
 }
 
 func ocrQRCode2(qrcodeFile string) (msg string, err error) {
@@ -87,9 +95,7 @@ func ocrQRCode2(qrcodeFile string) (msg string, err error) {
 	qrReader := zxingqrcode.NewQRCodeReader()
 	result, _ := qrReader.Decode(bmp, nil)
 
-	output := result.String()
-	fmt.Println("read from qr %s" + output)
-	return output, nil
+	return  result.String(), nil
 }
 
 //func svgToPng(inputSVG string, outputPNG string) {
