@@ -1,4 +1,4 @@
-package main
+package qrcode
 
 import (
 	"bytes"
@@ -7,12 +7,12 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 
-	cose "snapcore.com/qrcode/cose"
 	qrcode "github.com/yeqown/go-qrcode"
+	"snapcore.com/qrcode/cose"
 )
 
 // Encode
-// JSON -> CBOR -> COSE -> LZ4 -> Base45 -> QRCode generation
+// JSON -> CBOR+COSE -> ZLIB -> Base45 -> QRCode generation
 func encodeToFile(signer *cose.Signer, input []byte, qrFile string) error {
 
 	msg, err := signCOSE(signer, input)
@@ -56,7 +56,7 @@ func genQRCode2(qrcodestr string, destinationFile string) error {
 	return nil
 }
 
-func signCOSE(keypair *cose.Signer, input []byte) ([]byte, error) {
+func signCOSE(signer *cose.Signer, input []byte) ([]byte, error) {
 
 	// create a signature
 	sig := cose.NewSignature()
@@ -64,13 +64,13 @@ func signCOSE(keypair *cose.Signer, input []byte) ([]byte, error) {
 	sig.Headers.Protected["alg"] = "ES384"
 
 	// create a message
-	external := []byte("") // optional external data see https://tools.ietf.org/html/rfc8152#section-4.3
+	//external := []byte("") // optional external data see https://tools.ietf.org/html/rfc8152#section-4.3
 
 	msg := cose.NewSignMessage()
 	msg.Payload = input
 	msg.AddSignature(sig)
 
-	err := msg.Sign(rand.Reader, external, []cose.Signer{*keypair})
+	err := msg.Sign(rand.Reader, nil, []cose.Signer{*signer})
 	if err != nil {
 		return nil, errors.Wrap(err, "Error signing the message")
 	}

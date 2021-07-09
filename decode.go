@@ -1,10 +1,9 @@
-package main
+package qrcode
 
 import (
 	"bytes"
 	"compress/zlib"
 	"crypto"
-	cose "snapcore.com/qrcode/cose"
 	"fmt"
 	"github.com/fxamacker/cbor/v2"
 	"github.com/makiuchi-d/gozxing"
@@ -13,10 +12,11 @@ import (
 	"image"
 	"io"
 	"os"
+	cose "snapcore.com/qrcode/cose"
 )
 
 // Decode
-// Scan QRCode -> unBase45 -> unLZ4 -> unCBOR -> JSON
+// Scan QRCode -> unBase45 -> unLZIB -> unCBOR+COSE -> JSON
 func decode(qrcodeFile string, publickey crypto.PublicKey, alg *cose.Algorithm) (output []byte, err error) {
 
 	qrcodestr, err := ocrQRCode2(qrcodeFile)
@@ -54,14 +54,13 @@ func verifyCOSE(input []byte, publickey crypto.PublicKey, alg *cose.Algorithm) (
 		return nil, errors.Wrap(err, "Cannot unmarshall")
 	}
 
-	external := []byte("")
+	//external := []byte("")
 
-	err = msg.Verify(external, []cose.Verifier{*verifier})
+	err = msg.Verify(nil, []cose.Verifier{*verifier})
 	if err != nil {
 		return nil, errors.Wrap(err, "Cannot validate signature")
 	}
 	return msg.Payload, nil
-
 }
 
 func decompressZLIB(input []byte) ([]byte, error) {

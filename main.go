@@ -1,10 +1,8 @@
-package main
+package qrcode
 
 import (
-
 	"encoding/json"
 	"fmt"
-
 	cose "snapcore.com/qrcode/cose"
 )
 
@@ -27,10 +25,19 @@ func generateSigner() *cose.Signer {
 }
 
 
-func save(){
-	//x509.ParsePKCS8PrivateKey
-	//x509
-}
+//func ParseRsaPrivateKeyFromPemStr(privPEM string) (*crypto.PrivateKey, error) {
+//	block, _ := pem.Decode([]byte(privPEM))
+//	if block == nil {
+//		return nil, errors.New("failed to parse PEM block containing the key")
+//	}
+//
+//	priv, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	return priv, nil
+//}
 
 func main() {
 
