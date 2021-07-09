@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"compress/zlib"
 	"crypto"
-	cose "example.com/main/go-cose"
+	cose "snapcore.com/qrcode/cose"
 	"fmt"
 	"github.com/fxamacker/cbor/v2"
 	"github.com/makiuchi-d/gozxing"

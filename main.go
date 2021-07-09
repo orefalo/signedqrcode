@@ -1,10 +1,11 @@
 package main
 
 import (
+
 	"encoding/json"
 	"fmt"
 
-	cose "example.com/main/go-cose"
+	cose "snapcore.com/qrcode/cose"
 )
 
 func jsonEscape(i string) string {
@@ -23,6 +24,12 @@ func generateSigner() *cose.Signer {
 		panic(fmt.Sprintf(fmt.Sprintf("Error creating signer %s", err)))
 	}
 	return signer
+}
+
+
+func save(){
+	//x509.ParsePKCS8PrivateKey
+	//x509
 }
 
 func main() {

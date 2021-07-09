@@ -1,4 +1,4 @@
-module example.com/main
+module snapcore.com/qrcode
 
 go 1.16
 
@@ -9,6 +9,5 @@ require (
 	github.com/pkg/errors v0.8.0
 	github.com/stretchr/testify v1.7.0
 	github.com/yeqown/go-qrcode v1.5.6
-	go.mozilla.org/cose v0.0.0-20200930124131-25dc96df8228
 	golang.org/x/text v0.3.6 // indirect
 )

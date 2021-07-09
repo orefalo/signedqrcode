@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 
-	cose "example.com/main/go-cose"
+	cose "snapcore.com/qrcode/cose"
 	qrcode "github.com/yeqown/go-qrcode"
 )
 
