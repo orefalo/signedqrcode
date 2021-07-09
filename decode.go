@@ -16,7 +16,6 @@ import (
 	"os"
 )
 
-
 // Decode
 // Scan QRCode -> unBase45 -> unLZ4 -> unCBOR -> JSON
 func decode(qrcodeFile string, publickey crypto.PublicKey) {
@@ -37,13 +36,12 @@ func decode(qrcodeFile string, publickey crypto.PublicKey) {
 	msg := decompressZLIB(compressed)
 	fmt.Printf("cose len %d - %x\n", len(msg), msg)
 
-	output, err = verifyCOSE(msg, publickey)
+	_, err = verifyCOSE(msg, publickey)
 	if err != nil {
 		fmt.Println(err.Error())
 		return
 	}
 }
-
 
 func verifyCOSE(input []byte, publickey crypto.PublicKey) (output string, err error) {
 
@@ -77,7 +75,6 @@ func decompressZLIB(input []byte) []byte {
 	return output.Bytes()
 }
 
-
 func ocrQRCode2(qrcodeFile string) (msg string, err error) {
 	// open and decode image file
 	file, _ := os.Open(qrcodeFile)
@@ -94,6 +91,7 @@ func ocrQRCode2(qrcodeFile string) (msg string, err error) {
 	fmt.Println("read from qr %s" + output)
 	return output, nil
 }
+
 //func svgToPng(inputSVG string, outputPNG string) {
 //
 //	icon, _ := oksvg.ReadIconStream(strings.NewReader(inputSVG))
@@ -118,4 +116,3 @@ func ocrQRCode2(qrcodeFile string) (msg string, err error) {
 //		panic(err)
 //	}
 //}
-
