@@ -55,5 +55,6 @@ func main() {
 }`)), "./qrcode.png")
 
 	verifier := signer.Verifier()
-	decode("./qrcode.png", verifier.PublicKey, verifier.Alg)
+	decoded := decode("./qrcode.png", verifier.PublicKey, verifier.Alg)
+	fmt.Println(decoded)
 }

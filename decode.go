@@ -17,7 +17,7 @@ import (
 
 // Decode
 // Scan QRCode -> unBase45 -> unLZ4 -> unCBOR -> JSON
-func decode(qrcodeFile string, publickey crypto.PublicKey, alg *cose.Algorithm) {
+func decode(qrcodeFile string, publickey crypto.PublicKey, alg *cose.Algorithm) string {
 
 	fmt.Println("==================================================")
 
@@ -35,11 +35,12 @@ func decode(qrcodeFile string, publickey crypto.PublicKey, alg *cose.Algorithm) 
 	msg := decompressZLIB(compressed)
 	fmt.Printf("cose len %d - %x\n", len(msg), msg)
 
-	_, err = verifyCOSE(msg, publickey, alg)
+	decoded, err := verifyCOSE(msg, publickey, alg)
 	if err != nil {
 		fmt.Println(err.Error())
-		return
+		return ""
 	}
+	return decoded
 }
 
 func verifyCOSE(input []byte, publickey crypto.PublicKey, alg *cose.Algorithm) (output string, err error) {
@@ -53,7 +54,7 @@ func verifyCOSE(input []byte, publickey crypto.PublicKey, alg *cose.Algorithm) (
 	err = msg.Verify(external, []cose.Verifier{*verifier})
 	if err == nil {
 		fmt.Println("Message signature verified")
-		return msg.Payload, nil
+		return string(msg.Payload), nil
 	} else {
 		fmt.Println(fmt.Sprintf("Error verifying the message %+v", err))
 		return "", err
