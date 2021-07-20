@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"compress/zlib"
 	"crypto/rand"
-	"fmt"
 	"github.com/pkg/errors"
 
 	qrcode "github.com/yeqown/go-qrcode"
@@ -20,13 +19,13 @@ func encodeToFile(signer *cose.Signer, input []byte, qrFile string) error {
 		return errors.Wrap(err, "Cannot sign")
 	}
 
-	fmt.Printf("cose len %d - %x\n", len(msg), msg)
+	//fmt.Printf("cose len %d - %x\n", len(msg), msg)
 
 	compressed, err := compressZLIB(msg)
 	if err != nil {
 		return errors.Wrap(err, "Cannot compress zlib")
 	}
-	fmt.Printf("compressed len %d - %x\n", len(compressed), compressed)
+	//fmt.Printf("compressed len %d - %x\n", len(compressed), compressed)
 
 	qrcodebin, err := Base45Encode(compressed)
 	if err != nil {
@@ -34,7 +33,7 @@ func encodeToFile(signer *cose.Signer, input []byte, qrFile string) error {
 	}
 
 	qrcodestr := string(qrcodebin)
-	fmt.Printf("qrcodebin len %d - %s\n", len(qrcodestr), qrcodestr)
+	//fmt.Printf("qrcodebin len %d - %s\n", len(qrcodestr), qrcodestr)
 
 	err = genQRCode2(qrcodestr, qrFile)
 	if err != nil {

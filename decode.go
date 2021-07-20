@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"compress/zlib"
 	"crypto"
-	"fmt"
 	"github.com/fxamacker/cbor/v2"
 	"github.com/makiuchi-d/gozxing"
 	zxingqrcode "github.com/makiuchi-d/gozxing/qrcode"
@@ -29,14 +28,14 @@ func decode(qrcodeFile string, publickey crypto.PublicKey, alg *cose.Algorithm) 
 	if err != nil {
 		return nil, errors.Wrap(err, "Cannot decode base45")
 	}
-	fmt.Printf("compressed len %d - %x\n", len(compressed), compressed)
+	//fmt.Printf("compressed len %d - %x\n", len(compressed), compressed)
 
 	msg, err := decompressZLIB(compressed)
 	if err != nil {
 		return nil, errors.Wrap(err, "Cannot decompress zlib")
 
 	}
-	fmt.Printf("cose len %d - %x\n", len(msg), msg)
+	//fmt.Printf("cose len %d - %x\n", len(msg), msg)
 
 	decoded, err := verifyCOSE(msg, publickey, alg)
 	if err != nil {
