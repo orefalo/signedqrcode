@@ -67,6 +67,9 @@ func TestNew(t *testing.T)  {
         }
     ]
 }`)
+
+	t.Logf("Encoding: %s", content)
+
 	err := encodeToFile(signer, []byte(content), "./qrcode.png")
 	if err != nil {
 		t.Errorf("could not save image: %v", err)
@@ -74,7 +77,7 @@ func TestNew(t *testing.T)  {
 
 	} else {
 
-		t.Logf("Deconding..")
+		t.Logf("Deconding...")
 
 		verifier := signer.Verifier()
 		decoded, err := decode("./qrcode.png", verifier.PublicKey, verifier.Alg)
