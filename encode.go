@@ -43,7 +43,12 @@ func encodeToFile(signer *cose.Signer, input []byte, qrFile string) error {
 }
 
 func genQRCode(qrcodestr string, destinationFile string) error {
-	qrc, err := qrcode.New(qrcodestr)
+
+	encOpts := qrcode.DefaultConfig()
+	encOpts.EcLevel = qrcode.ErrorCorrectionQuart
+	encOpts.EncMode = qrcode.EncModeNumeric
+
+	qrc, err := qrcode.NewWithConfig(qrcodestr, encOpts, qrcode.WithQRWidth(100))
 	if err != nil {
 		return errors.Wrap(err, "could not generate QRCode")
 	}

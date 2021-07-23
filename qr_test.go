@@ -77,7 +77,7 @@ func TestNew(t *testing.T)  {
 
 	} else {
 
-		t.Logf("Deconding...")
+		t.Logf("Decoding...")
 
 		verifier := signer.Verifier()
 		decoded, err := decode("./qrcode.png", verifier.PublicKey, verifier.Alg)
