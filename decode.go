@@ -4,21 +4,20 @@ import (
 	"bytes"
 	"compress/zlib"
 	"crypto"
-	"github.com/fxamacker/cbor/v2"
 	"github.com/makiuchi-d/gozxing"
 	zxingqrcode "github.com/makiuchi-d/gozxing/qrcode"
 	"github.com/pkg/errors"
 	"image"
 	"io"
 	"os"
-	cose "snapcore.com/qrcode/cose"
+	"snapcore.com/qrcode/cose"
 )
 
 // Decode
 // Scan QRCode -> unBase45 -> unLZIB -> unCBOR+COSE -> JSON
 func decode(qrcodeFile string, publickey crypto.PublicKey, alg *cose.Algorithm) (output []byte, err error) {
 
-	qrcodestr, err := ocrQRCode2(qrcodeFile)
+	qrcodestr, err := ocrQRCode(qrcodeFile)
 	if err != nil {
 		return nil, errors.Wrap(err, "Cannot OCR qrcode")
 
@@ -47,13 +46,12 @@ func decode(qrcodeFile string, publickey crypto.PublicKey, alg *cose.Algorithm) 
 func verifyCOSE(input []byte, publickey crypto.PublicKey, alg *cose.Algorithm) (output []byte, err error) {
 
 	verifier, err := cose.NewVerifierFromKey(alg, publickey)
-	var msg cose.SignMessage
-	err = cbor.Unmarshal(input, &msg)
+
+	msg := cose.NewSignMessage()
+	err = msg.UnmarshalCBOR(input)
 	if err != nil {
 		return nil, errors.Wrap(err, "Cannot unmarshall")
 	}
-
-	//external := []byte("")
 
 	err = msg.Verify(nil, []cose.Verifier{*verifier})
 	if err != nil {
@@ -81,7 +79,7 @@ func decompressZLIB(input []byte) ([]byte, error) {
 	return output.Bytes(), nil
 }
 
-func ocrQRCode2(qrcodeFile string) (msg string, err error) {
+func ocrQRCode(qrcodeFile string) (msg string, err error) {
 	// open and decode image file
 	file, _ := os.Open(qrcodeFile)
 	img, _, _ := image.Decode(file)
@@ -93,30 +91,5 @@ func ocrQRCode2(qrcodeFile string) (msg string, err error) {
 	qrReader := zxingqrcode.NewQRCodeReader()
 	result, _ := qrReader.Decode(bmp, nil)
 
-	return  result.String(), nil
+	return result.String(), nil
 }
-
-//func svgToPng(inputSVG string, outputPNG string) {
-//
-//	icon, _ := oksvg.ReadIconStream(strings.NewReader(inputSVG))
-//
-//	//w := int(icon.ViewBox.W)
-//	//h := int(icon.ViewBox.H)
-//
-//	w, h := 512, 512
-//
-//	icon.SetTarget(0, 0, float64(w), float64(h))
-//	rgba := image.NewRGBA(image.Rect(0, 0, w, h))
-//	icon.Draw(rasterx.NewDasher(w, h, rasterx.NewScannerGV(w, h, rgba, rgba.Bounds())), 1)
-//
-//	out, err := os.Create(outputPNG)
-//	if err != nil {
-//		panic(err)
-//	}
-//	defer out.Close()
-//
-//	err = png.Encode(out, rgba)
-//	if err != nil {
-//		panic(err)
-//	}
-//}

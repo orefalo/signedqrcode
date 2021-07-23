@@ -35,14 +35,14 @@ func encodeToFile(signer *cose.Signer, input []byte, qrFile string) error {
 	qrcodestr := string(qrcodebin)
 	//fmt.Printf("qrcodebin len %d - %s\n", len(qrcodestr), qrcodestr)
 
-	err = genQRCode2(qrcodestr, qrFile)
+	err = genQRCode(qrcodestr, qrFile)
 	if err != nil {
 		return errors.Wrap(err, "Cannot generate qrCode")
 	}
 	return nil
 }
 
-func genQRCode2(qrcodestr string, destinationFile string) error {
+func genQRCode(qrcodestr string, destinationFile string) error {
 	qrc, err := qrcode.New(qrcodestr)
 	if err != nil {
 		return errors.Wrap(err, "could not generate QRCode")
