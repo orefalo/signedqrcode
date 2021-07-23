@@ -1,4 +1,4 @@
-<img src="/Users/orefalo/GitRepositories/qr-related/signedqrcode/qrcode.png" style="zoom:10%;" />
+<img src="qrcode.png" style="zoom:10%;" />
 
 
 
