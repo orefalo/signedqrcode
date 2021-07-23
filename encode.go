@@ -46,9 +46,9 @@ func genQRCode(qrcodestr string, destinationFile string) error {
 
 	encOpts := qrcode.DefaultConfig()
 	encOpts.EcLevel = qrcode.ErrorCorrectionQuart
-	encOpts.EncMode = qrcode.EncModeNumeric
+	encOpts.EncMode = qrcode.EncModeAuto
 
-	qrc, err := qrcode.NewWithConfig(qrcodestr, encOpts, qrcode.WithQRWidth(100))
+	qrc, err := qrcode.NewWithConfig(qrcodestr, encOpts, qrcode.WithQRWidth(20))
 	if err != nil {
 		return errors.Wrap(err, "could not generate QRCode")
 	}
