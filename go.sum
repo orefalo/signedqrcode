@@ -25,6 +25,8 @@ github.com/yeqown/go-qrcode v1.5.7-0.20210723083422-f96dda8996d2 h1:5GKPBgDWzbG6
 github.com/yeqown/go-qrcode v1.5.7-0.20210723083422-f96dda8996d2/go.mod h1:C1eAU4Jure3vqD56kqzeSLaX84MHg3fZAMNID4nXX+Y=
 github.com/yeqown/go-qrcode v1.5.7-0.20210723095357-21cbdc91f3ac h1:oE2Ce9I0kDQ0NjX6VO7+2arYB6G22EycIWzI9x5szig=
 github.com/yeqown/go-qrcode v1.5.7-0.20210723095357-21cbdc91f3ac/go.mod h1:C1eAU4Jure3vqD56kqzeSLaX84MHg3fZAMNID4nXX+Y=
+github.com/yeqown/go-qrcode v1.5.7 h1:HqytHWuBmQsF7U+Kqsxhvyyvf3hNZL/LpGPDTD9rd48=
+github.com/yeqown/go-qrcode v1.5.7/go.mod h1:C1eAU4Jure3vqD56kqzeSLaX84MHg3fZAMNID4nXX+Y=
 github.com/yeqown/reedsolomon v1.0.0 h1:x1h/Ej/uJnNu8jaX7GLHBWmZKCAWjEJTetkqaabr4B0=
 github.com/yeqown/reedsolomon v1.0.0/go.mod h1:P76zpcn2TCuL0ul1Fso373qHRc69LKwAw/Iy6g1WiiM=
 golang.org/x/image v0.0.0-20200927104501-e162460cd6b5/go.mod h1:FeLwcggjj3mMvU+oOTbSwawSJRM1uh48EjtB4UJZlP0=
