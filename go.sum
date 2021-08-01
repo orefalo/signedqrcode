@@ -10,6 +10,8 @@ github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 h1:DACJavvAHhabrF0
 github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0/go.mod h1:E/TSTwGwJL78qG/PmXZO1EjYhfJinVAhrmmHX6Z8B9k=
 github.com/makiuchi-d/gozxing v0.0.1 h1:Cts1tgbSSR1l9Of4Ojom4djuupaKmBMWwkpdfFTI3fQ=
 github.com/makiuchi-d/gozxing v0.0.1/go.mod h1:Tt5nF+kNliU+5MDxqPpsFrtsWNdABQho/xdCZZVKCQc=
+github.com/makiuchi-d/gozxing v0.0.2 h1:TGSCQRXd9QL1ze1G1JE9sZBMEr6/HLx7m5ADlLUgq7E=
+github.com/makiuchi-d/gozxing v0.0.2/go.mod h1:Tt5nF+kNliU+5MDxqPpsFrtsWNdABQho/xdCZZVKCQc=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
