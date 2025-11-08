@@ -3,8 +3,9 @@ package qrcode
 import (
 	"encoding/json"
 	"fmt"
-	cose "snapcore.com/qrcode/cose"
 	"testing"
+
+	cose "snapcore.com/qrcode/cose"
 )
 
 func jsonEscape(i string) string {
@@ -20,7 +21,7 @@ func generateSigner() *cose.Signer {
 	// create a signer with a new private key
 	signer, err := cose.NewSigner(cose.ES384, nil)
 	if err != nil {
-		panic(fmt.Sprintf(fmt.Sprintf("Error creating signer %s", err)))
+		panic(fmt.Sprintf("Error creating signer %s", err))
 	}
 	return signer
 }
@@ -39,7 +40,7 @@ func generateSigner() *cose.Signer {
 //	return priv, nil
 //}
 
-func TestNew(t *testing.T)  {
+func TestNew(t *testing.T) {
 
 	signer := generateSigner()
 
